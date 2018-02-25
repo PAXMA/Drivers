@@ -60,9 +60,10 @@ static int device_release(struct inode *inode, struct file *file){
 }
 
 static ssize_t device_read(struct file *fl, char *buffer, size_t length, loff_t * offset){
+	printk(KERN_INFO"Trying to read\n");
 	/*if (copy_to_user(msg, buffer, length))
 		return -EFAULT;
-	return 0;*/
+	return 0;
 	int bytes_read = 0;
 	if (*msg_Ptr == 0)
 		return 0;
@@ -71,19 +72,21 @@ static ssize_t device_read(struct file *fl, char *buffer, size_t length, loff_t 
 		length--;
 		bytes_read++;
 	}
-	return bytes_read;
+	return bytes_read;*/
+	if(copy_to_user(buffer, msg, length) == 0){
+		return length;
+	}
+	else{
+		return -EFAULT;
+	}
 }
 
 static ssize_t device_write(struct file *fl, const char *buffer, size_t length, loff_t * offset){
+	printk(KERN_INFO"Trying to write %s\n", buffer);
 	/*if (copy_from_user(msg, buffer, length))
 		return -EFAULT;
 	return 0;*/
-	printk(KERN_INFO "Trying to write %s\n", buffer);
-	if (*msg_Ptr != 0)
-		*msg_Ptr = 0;
-	while (length && *msg_Ptr != BUF_LEN){
-		get_user(*(msg_Ptr++), buffer++);
-		length--;
-	}
-	return 0;
+	sprintf(msg, "%s", buffer);
+	return length;
 }
+
