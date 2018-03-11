@@ -10,9 +10,8 @@ static int device_release(struct inode *, struct file *);
 static ssize_t device_read(struct file *, char *, size_t, loff_t *);
 static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 
-#define BUF_LEN 80
 #define DEVICE_NAME "foo"
-
+#define BUF_LEN 80
 static int Major;
 static char msg[BUF_LEN];
 static char *msg_Ptr;
@@ -33,7 +32,7 @@ int init_module(){
 	}
 	printk(KERN_INFO "I was assigned major number %d. To talk to\n", Major);
 	printk(KERN_INFO "the driver, create a dev file with\n");
-	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
+	printk(KERN_INFO "'sudo mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
 	return 0;
 }
 
@@ -42,12 +41,14 @@ void cleanup_module(){
 	printk(KERN_ALERT "Сleanup_module OK \n");
 }
 
+// cat /dev/foo
 static int device_open(struct inode *inode, struct file *file){
-	static int counter = 0;
+	static int counter = 1;
 	if (Device_Open)
 		return -EBUSY;
 	Device_Open++;
-	sprintf(msg, "I already told you %d times Hello world!\n", counter++);
+	if (counter == 1)
+		sprintf(msg, "It is the %dst and last time this message is displayed\n", counter++);
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
 	return 0;
@@ -60,10 +61,11 @@ static int device_release(struct inode *inode, struct file *file){
 }
 
 static ssize_t device_read(struct file *fl, char *buffer, size_t length, loff_t * offset){
-	printk(KERN_INFO"Trying to read\n");
-	/*if (copy_to_user(msg, buffer, length))
-		return -EFAULT;
-	return 0;
+	printk(KERN_INFO"Trying to read, given length is %d\n", length);
+	/*if(length > 20){
+		length = 20;
+		printk(KERN_INFO"length forced to 20");
+	}*/
 	int bytes_read = 0;
 	if (*msg_Ptr == 0)
 		return 0;
@@ -72,21 +74,20 @@ static ssize_t device_read(struct file *fl, char *buffer, size_t length, loff_t 
 		length--;
 		bytes_read++;
 	}
-	return bytes_read;*/
-	if(copy_to_user(buffer, msg, length) == 0){
-		return length;
-	}
-	else{
-		return -EFAULT;
-	}
+	printk(KERN_INFO"READ\nbuffer: %s\nmsg: %s", buffer, msg);
+	return bytes_read;
 }
 
 static ssize_t device_write(struct file *fl, const char *buffer, size_t length, loff_t * offset){
-	printk(KERN_INFO"Trying to write %s\n", buffer);
-	/*if (copy_from_user(msg, buffer, length))
-		return -EFAULT;
-	return 0;*/
-	sprintf(msg, "%s", buffer);
+	printk(KERN_INFO"Trying to write %.*swith length %d\n",length, buffer, length);
+	sprintf(msg, "%.*s", length, buffer);
+	printk(KERN_INFO"WRITE\nbuffer: %s\nmsg: %s", buffer, msg);
 	return length;
 }
 
+
+
+/*
+unsigned long copy_to_user (void __user *to, const void *from, unsigned long n);
+unsigned long copy_from_user (void *to, const void __user *from, unsigned long n);
+*/
